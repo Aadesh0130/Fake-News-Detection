@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUMA Memory Allocation Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+    <div id="particle-bg"></div>
+    <div class="app-container">
+        <!-- TOP NAVBAR -->
+        <nav class="navbar glass-panel">
+            <div class="nav-left">
+                <div class="logo">
+                    <i class="fa-solid fa-microchip neon-text-blue"></i>
+                    <span>NUMA <span class="neon-text-cyan">Simulator</span></span>
+                </div>
+                <div class="nav-tabs">
+                    <button class="tab active"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+                    <button class="tab"><i class="fa-solid fa-network-wired"></i> Topology</button>
+                    <button class="tab"><i class="fa-solid fa-memory"></i> Allocation</button>
+                    <button class="tab"><i class="fa-solid fa-gauge-high"></i> Performance</button>
+                </div>
+            </div>
+            <div class="nav-right">
+                <div class="status-indicator">
+                    <span class="pulse-dot"></span>
+                    <span id="sim-status-text">Running</span>
+                </div>
+                <button class="icon-btn" id="theme-toggle" title="Toggle Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <button class="icon-btn" title="Settings">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+            </div>
+        </nav>
+
+        <div class="main-layout">
+            <!-- SIDEBAR -->
+            <aside class="sidebar glass-panel">
+                <div class="sidebar-section">
+                    <h3><i class="fa-solid fa-server"></i> CPU Nodes</h3>
+                    <ul class="node-list" id="cpu-node-list">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3><i class="fa-solid fa-database"></i> Memory Nodes</h3>
+                    <ul class="node-list" id="mem-node-list">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <h3><i class="fa-solid fa-bars-progress"></i> Processes</h3>
+                    <ul class="node-list" id="process-list">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- MAIN DASHBOARD -->
+            <main class="dashboard">
+                <!-- Overview Panel -->
+                <div class="overview-panel">
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon cpu-icon"><i class="fa-solid fa-microchip"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-cpus">4</span>
+                            <span class="stat-label">Total CPUs</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon mem-icon"><i class="fa-solid fa-memory"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-mems">4</span>
+                            <span class="stat-label">Memory Nodes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon proc-icon"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-procs">12</span>
+                            <span class="stat-label">Active Processes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon lat-icon"><i class="fa-solid fa-stopwatch"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-lat">42<small>ns</small></span>
+                            <span class="stat-label">Avg Latency</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- NUMA Topology -->
+                    <div class="dashboard-card topology-card glass-panel">
+                        <div class="card-header">
+                            <h2>NUMA Topology</h2>
+                            <div class="card-actions">
+                                <button class="icon-btn mini"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                                <button class="icon-btn mini"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                            </div>
+                        </div>
+                        <div class="card-body topology-container" id="topology-container">
+                            <canvas id="topology-canvas"></canvas>
+                            <!-- Tooltip for latency -->
+                            <div id="topology-tooltip" class="tooltip hidden">Latency: <span></span>ns</div>
+                        </div>
+                    </div>
+
+                    <!-- Memory Allocation Map -->
+                    <div class="dashboard-card memory-card glass-panel">
+                        <div class="card-header">
+                            <h2>Memory Allocation Heatmap</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="heatmap-container" id="memory-heatmap">
+                                <!-- Generated by JS -->
+                            </div>
+                            <div id="heatmap-tooltip" class="tooltip hidden">Process: <span></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Process View Table -->
+                    <div class="dashboard-card process-card glass-panel col-span-2">
+                        <div class="card-header">
+                            <h2>Process View</h2>
+                            <div class="search-box">
+                                <i class="fa-solid fa-search"></i>
+                                <input type="text" placeholder="Search processes...">
+                            </div>
+                        </div>
+                        <div class="card-body table-container">
+                            <table class="process-table">
+                                <thead>
+                                    <tr>
+                                        <th>PID <i class="fa-solid fa-sort"></i></th>
+                                        <th>Assigned Node <i class="fa-solid fa-sort"></i></th>
+                                        <th>Memory Used <i class="fa-solid fa-sort"></i></th>
+                                        <th>Access Latency <i class="fa-solid fa-sort"></i></th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="process-table-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT PANEL (Controls & Analytics) -->
+            <aside class="right-panel">
+                <!-- Simulation Controls -->
+                <div class="control-panel glass-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-sliders"></i> Simulation Controls</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="control-actions">
+                            <button class="btn btn-primary" id="btn-start-pause"><i class="fa-solid fa-pause"></i> Pause</button>
+                            <button class="btn btn-secondary" id="btn-reset"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>CPU Nodes: <span id="val-cpu-nodes">4</span></label>
+                            <input type="range" id="slider-cpu-nodes" min="2" max="16" value="4" step="2">
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>Mem Size/Node: <span id="val-mem-size">16</span> GB</label>
+                            <input type="range" id="slider-mem-size" min="8" max="128" value="16" step="8">
+                        </div>
+
+                        <div class="control-group">
+                            <label>Inter-Node Latency Base: <span id="val-latency">100</span> ns</label>
+                            <input type="range" id="slider-latency" min="50" max="300" value="100" step="10">
+                        </div>
+
+                        <div class="control-group dropdown-group">
+                            <label>Allocation Strategy</label>
+                            <div class="custom-select">
+                                <select id="strategy-select">
+                                    <option value="local">Local First</option>
+                                    <option value="interleaved">Interleaved</option>
+                                    <option value="random">Random</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-outline" id="btn-export" style="width: 100%; margin-top: 1rem;"><i class="fa-solid fa-download"></i> Export Snapshot</button>
+                    </div>
+                </div>
+
+                <!-- Performance Analytics -->
+                <div class="analytics-panel glass-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-pie"></i> Analytics</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <h4>Latency Over Time</h4>
+                            <canvas id="latency-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h4>Memory Distribution</h4>
+                            <div class="bar-chart" id="memory-dist-chart">
+                                <!-- Rendered via CSS/JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
